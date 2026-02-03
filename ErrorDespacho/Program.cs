@@ -1,7 +1,11 @@
+using ErrorDespacho.Services.P2HServices;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddHttpClient<P2hService>();
+
 
 var app = builder.Build();
 

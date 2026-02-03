@@ -1,8 +1,19 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
-}
+﻿<form asp-action="CargarSoportes"
+      asp-controller="Home"
+      method="post"
+      enctype="multipart/form-data">
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+    <div class="mb-3">
+        <label class="form-label">Archivo Excel (.xlsx)</label>
+        <input type="file"
+               name="archivoExcel"
+               class="form-control"
+               accept=".xlsx"
+               required />
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        Cargar Excel
+    </button>
+</form>
+
