@@ -1,3 +1,8 @@
 <Solution>
+  <Project Path="Business/Business/Business.csproj" Id="7bea6b42-c1ab-4fa8-b3ab-635c563f6226" />
+  <Project Path="Constant/Constant/Constant.csproj" Id="619346fb-3f13-40e5-b146-61016a3789bd" />
+  <Project Path="Data/Data/Data.csproj" Id="1a8f8817-32eb-4f0f-a894-9544c5c2864e" />
   <Project Path="ErrorDespacho/ErrorDespacho.csproj" />
+  <Project Path="Helpers/Helper/Helper.csproj" Id="41cd9d2f-228a-43f2-b53a-2c90bbb4ece7" />
+  <Project Path="Models/Models/Models.csproj" Id="0af4c14e-05d9-4d71-bd2f-b6ceb2975a0e" />
 </Solution>

@@ -1,13 +1,26 @@
-using ErrorDespacho.Services.P2HServices;
+using AutoMapper;
+using ErrorDespacho.DependencyContainer;
+using ErrorDespacho.Mapper;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpClient();
+builder.Services.DependencyInjection();
 
-builder.Services.AddHttpClient<P2hService>();
+builder.Services.AddAutoMapper(typeof(PayloadProfile).Assembly);
 
+
+builder.Services.AddScoped(sp =>
+    sp.GetRequiredService<IConfiguration>()
+      .GetConnectionString("OfimaConnection"));
 
 var app = builder.Build();
+using (var scope = app.Services.CreateScope())
+{
+    var mapper = scope.ServiceProvider.GetRequiredService<IMapper>();
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
