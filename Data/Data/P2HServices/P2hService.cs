@@ -70,20 +70,24 @@ namespace Data.P2HServices
 
         public async Task<P2hGetResponse?> SendDespachoAsync(PayloadRoot payload)
         {
-            var request = new P2hRequest<PayloadRoot>
+
+            try
             {
-                Payload = payload
-            };
+                var json = JsonSerializer.Serialize(payload, _jsonOptions);
 
-            var json = JsonSerializer.Serialize(request, _jsonOptions);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+                using var response = await _httpClient.PostAsync("/api/dispatch/send", content);
 
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var response = await _httpClient.PostAsync("/api/dispatch/send", content);
+                response.EnsureSuccessStatusCode();
 
-            response.EnsureSuccessStatusCode();
-
-            var responseJson = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<P2hGetResponse>(responseJson, _jsonOptions);
+                var responseJson = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<P2hGetResponse>(responseJson, _jsonOptions);
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+           
         }
 
         public async Task<P2hGetResponse?> GetDispatchAsync(string autorizacion)
@@ -106,6 +110,31 @@ namespace Data.P2HServices
             {
                 throw;
             }
+        }
+
+        public async Task<P2hGetResponse?> GetOrdersAsync(
+        string identification,
+        string identificationType,
+        string status,
+        string? authorization = null)
+        {
+            var query = new List<string>
+            {
+                $"identification={Uri.EscapeDataString(identification)}",
+                $"identificationType={Uri.EscapeDataString(identificationType)}",
+                $"status={Uri.EscapeDataString(status)}"
+            };
+
+            if (!string.IsNullOrWhiteSpace(authorization))
+                query.Add($"authorization={Uri.EscapeDataString(authorization)}");
+
+            var url = $"/api/scgo/v1/orders?{string.Join("&", query)}";
+
+            using var response = await _httpClient.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<P2hGetResponse>(json, _jsonOptions);
         }
 
 

@@ -24,6 +24,11 @@ namespace Business.Business.P2hBll
             return _repository.GetDispatchAsync(autorizacion);
         }
 
+        public Task<P2hGetResponse?> GetOrdersAsync(string identification, string identificationType, string status, string? authorization = null)
+        {
+            return _repository.GetOrdersAsync(identification, identificationType, status, authorization);
+        }
+
         public Task<P2hGetResponse?> SendDespachoAsync(PayloadRoot payload)
         {
             return _repository.SendDespachoAsync(payload);

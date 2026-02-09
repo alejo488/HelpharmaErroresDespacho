@@ -1,4 +1,5 @@
 using AutoMapper;
+using Business.Interfaces;
 using ClosedXML.Excel;
 using Data.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -10,14 +11,14 @@ namespace ErrorDespacho.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IP2hService _p2h;
-        private readonly IOfimaServices _iOfimaService;
+        private readonly IP2hBusiness _p2h;
+        private readonly IOfimaBusiness _iOfimaBusiness;
         private readonly IMapper _mapper;
 
-        public HomeController(IP2hService p2hService, IOfimaServices iOfimaService, IMapper mapper)
+        public HomeController(IP2hBusiness p2hService, IOfimaBusiness iOfimaService, IMapper mapper)
         {
             _p2h = p2hService;
-            _iOfimaService = iOfimaService;
+            _iOfimaBusiness = iOfimaService;
             _mapper = mapper;
         }
 
@@ -62,46 +63,71 @@ namespace ErrorDespacho.Controllers
                 if (fila.Cell(7).IsEmpty())
                     continue;
 
-                // Columna combinada de inconsistencias (24)
-                var textoInconsistencia = fila.Cell(24).GetString();
-                var partes = textoInconsistencia.Split('-', 4);
+                // ===== Inconsistencias(col 23) =====
+                var textoInconsistencia = fila.Cell(24).GetString()?.Trim();
 
-                fila.Cell(11).TryGetValue(out int cantEntregada);
-                fila.Cell(16).TryGetValue(out decimal costoUnitario);
-                fila.Cell(18).TryGetValue(out decimal totalCuota);
-                fila.Cell(19).TryGetValue(out DateTime fechaDespacho);
-                fila.Cell(20).TryGetValue(out decimal valorRecetario);
+                // Formato esperado:
+                // 90418-(E)-PRESTADOR-LA FECHA DE ENTREGA NO COINCIDE...
+                string? codigoInconsistencia = null;
+                string? clasificacionInconsistencia = null;
+                string? descripcionInconsistencia = null;
 
-                InconsistenciaExcelDto inc = new InconsistenciaExcelDto();
-                inc.DWTipoRegistro = fila.Cell(1).GetString();
-                inc.DWNumeroRecetario = fila.Cell(2).GetString();
-                inc.DWCodigoIpsEmite = fila.Cell(3).GetString();
-                inc.DWConsecutivoAutorizacion = fila.Cell(4).GetString();
-                inc.DWCodigoTipoPrestacion = fila.Cell(5).GetString();
-                inc.DWCodigoOrigenAutorizacion = fila.Cell(6).GetString();
-                inc.DWOrden = $"{inc.DWCodigoIpsEmite}-{inc.DWConsecutivoAutorizacion}{inc.DWCodigoTipoPrestacion}{inc.DWCodigoOrigenAutorizacion}";
-                inc.DWTipoIdAfiliado = fila.Cell(8).GetString();
-                inc.DWNroIdAfiliado = fila.Cell(9).GetString();
-                inc.DWMedicamento = fila.Cell(10).GetString();
-                inc.DWCantEntregada = fila.Cell(11).IsEmpty() ? null : cantEntregada;
-                inc.DWNroOrden = fila.Cell(12).GetString();
-                inc.DWNroIdMedico = fila.Cell(13).GetString();
-                inc.DWDiagnostico = fila.Cell(14).GetString();
-                inc.DWFarmacia = fila.Cell(15).GetString();
-                inc.DWCostoUnitario = fila.Cell(16).IsEmpty() ? null : costoUnitario;
-                inc.DWPlu = fila.Cell(17).GetString();
-                inc.DWTotalCuotaModeradora = fila.Cell(18).IsEmpty() ? null : totalCuota;
-                inc.DWFechaDespacho = fila.Cell(19).IsEmpty() ? null : fechaDespacho;
-                inc.DWValorRecetario = fila.Cell(20).IsEmpty() ? null : valorRecetario;
-                inc.DWClasificacionIngresos = fila.Cell(21).GetString();
-                inc.DWConsecutivoAutorizacionEnRisc = fila.Cell(22).GetString();
-                inc.DWEstadoDelRegistro = fila.Cell(23).GetString();
-                inc.DWCodigoInconsistencia = partes.ElementAtOrDefault(0)?.Trim();
-                inc.DWClasificacionInconsistencia = partes.ElementAtOrDefault(1)?
-                                                .Replace("(", "")
-                                                .Replace(")", "")
-                                                .Trim();
-                inc.DWDescripcionInconsistencia = partes.ElementAtOrDefault(3)?.Trim();
+                if (!string.IsNullOrWhiteSpace(textoInconsistencia))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(
+                        textoInconsistencia,
+                        @"^(?<codigo>\d+)-\((?<clasif>[^)]+)\)-(?<desc>.+)$");
+
+                    if (match.Success)
+                    {
+                        codigoInconsistencia = match.Groups["codigo"].Value.Trim();
+                        clasificacionInconsistencia = match.Groups["clasif"].Value.Trim();
+                        descripcionInconsistencia = match.Groups["desc"].Value.Trim();
+                    }
+                }
+
+                // ===== Tipos =====
+                fila.Cell(10).TryGetValue(out int cantEntregada);
+                fila.Cell(15).TryGetValue(out decimal costoUnitario);
+                fila.Cell(17).TryGetValue(out decimal totalCuota);
+                fila.Cell(18).TryGetValue(out DateTime fechaDespacho);
+                fila.Cell(19).TryGetValue(out decimal valorRecetario);
+
+                // ===== DTO =====
+                var inc = new InconsistenciaExcelDto
+                {
+                    DWTipoRegistro = fila.Cell(1).GetString(),
+                    DWNumeroRecetario = fila.Cell(2).GetString(),
+                    DWCodigoIpsEmite = fila.Cell(3).GetString(),
+                    DWConsecutivoAutorizacion = fila.Cell(4).GetString(),
+                    DWCodigoTipoPrestacion = fila.Cell(5).GetString(),
+                    DWCodigoOrigenAutorizacion = fila.Cell(6).GetString(),
+
+                    // Se construye, NO se lee
+                    DWOrden = $"{fila.Cell(3).GetString()}-{fila.Cell(4).GetString()}{fila.Cell(5).GetString()}{fila.Cell(6).GetString()}",
+
+                    DWTipoIdAfiliado = fila.Cell(7).GetString(),
+                    DWNroIdAfiliado = fila.Cell(8).GetString(),
+                    DWMedicamento = fila.Cell(9).GetString(),
+                    DWCantEntregada = fila.Cell(10).IsEmpty() ? null : cantEntregada,
+                    DWNroOrden = fila.Cell(11).GetString(),
+                    DWNroIdMedico = fila.Cell(12).GetString(),
+                    DWDiagnostico = fila.Cell(13).GetString(),
+                    DWFarmacia = fila.Cell(14).GetString(),
+                    DWCostoUnitario = fila.Cell(15).IsEmpty() ? null : costoUnitario,
+                    DWPlu = fila.Cell(16).GetString(),
+                    DWTotalCuotaModeradora = fila.Cell(17).IsEmpty() ? null : totalCuota,
+                    DWFechaDespacho = fila.Cell(18).IsEmpty() ? null : fechaDespacho,
+                    DWValorRecetario = fila.Cell(19).IsEmpty() ? null : valorRecetario,
+                    DWClasificacionIngresos = fila.Cell(20).GetString(),
+                    DWConsecutivoAutorizacionEnRisc = fila.Cell(21).GetString(),
+                    DWEstadoDelRegistro = fila.Cell(22).GetString(),
+
+                    DWCodigoInconsistencia = codigoInconsistencia,
+                    DWClasificacionInconsistencia = clasificacionInconsistencia,
+                    DWDescripcionInconsistencia = descripcionInconsistencia
+                };
+
                 resultado.Add(inc);
             }
 
@@ -110,7 +136,7 @@ namespace ErrorDespacho.Controllers
                 var despacho = await _p2h.GetDespachoAsync(item.DWOrden);
                 item.P2hResponse = despacho;
 
-                var facDto = _iOfimaService.ObtenerFacturasMvAsync(item.DWOrden,item.DWNroIdAfiliado).Result;
+                var facDto = _iOfimaBusiness.ObtenerFacturasMvAsync(item.DWOrden,item.DWNroIdAfiliado).Result;
 
                 var order = despacho.DispatchOrders.ElementAtOrDefault(0);
                 if (order?.Payload == null)
@@ -134,8 +160,12 @@ namespace ErrorDespacho.Controllers
                     payload = _mapper.Map<Payload>(payloadDto)
 
                 };
-               var response= _p2h.SendDespachoAsync(pyloadSend);
-                var responseGet = _p2h.GetDispatchAsync(item.DWOrden).Result;
+
+
+
+                var response= _p2h.SendDespachoAsync(pyloadSend);
+
+                var responseGet = _p2h.GetDispatchAsync(item.DWOrden).Result;//queda pendiente por saber esto que hace
 
                 item.FacturaOfimaDto.AddRange(facDto);
             }

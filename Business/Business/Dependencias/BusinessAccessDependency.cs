@@ -12,6 +12,7 @@ namespace Business.Dependencias
             #region [ Repository Data Access ]
 
             services.AddScoped<IP2hBusiness, P2hBusiness>();
+            services.AddScoped<IOfimaBusiness, OfimaBusiness>();
 
             //
             #endregion
